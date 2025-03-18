@@ -14,12 +14,14 @@ namespace Client
     {
         static void Main(string[] args)
         {
-            string jsonString = "{\"message\" : \"안녕하세요\"}";
+            string jsonString = "{\"message\" : \"이건 클라이언트에서 서버로 보내는 패킷.\"}";
             byte[] message = Encoding.UTF8.GetBytes(jsonString);
+            // 정수형 숫자를 버퍼에 넣을 때는 항상 바이트 오더를 조정해줘야함!
             ushort length = (ushort)message.Length;
+            //length = (ushort)IPAddress.HostToNetworkOrder((short)length);
 
             byte[] lengthBuffer = new byte[2];
-            lengthBuffer = BitConverter.GetBytes(length);
+            lengthBuffer = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)length));
 
             byte[] buffer = new byte[2 + length];
 
@@ -36,6 +38,8 @@ namespace Client
 
             int RecvLength = clientSocket.Receive(lengthBuffer, 2, SocketFlags.None);
             length = BitConverter.ToUInt16(lengthBuffer, 0);
+            // 호스트 바이트 순서가 cpu, os에 따라 달라서 네트워크 바이트 순서로 바꿈
+            length = (ushort)IPAddress.NetworkToHostOrder((short)length);
 
             byte[] recvBuffer = new byte[4096];
             RecvLength = clientSocket.Receive(recvBuffer, length, SocketFlags.None);

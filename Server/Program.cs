@@ -26,6 +26,7 @@ namespace Server
             byte[] headerBuffer = new byte[2];
             int RecvLength = clientSocket.Receive(headerBuffer, 2, SocketFlags.None);
             ushort packetLength = BitConverter.ToUInt16(headerBuffer, 0);
+            packetLength = (ushort)IPAddress.NetworkToHostOrder((short)packetLength);
 
             // 실제 패킷(header 길이 만큼)
             byte[] dataBuffer = new byte[4096];
@@ -37,14 +38,14 @@ namespace Server
 
             string message = "{\"message\" : \"서버가 잘 받음...\"}";
             byte[] messageBuffer = Encoding.UTF8.GetBytes(message);
-            ushort length = (ushort)messageBuffer.Length;
+            ushort length = (ushort)IPAddress.HostToNetworkOrder((short)messageBuffer.Length);
 
             headerBuffer = BitConverter.GetBytes(length);
 
             byte[] packetBuffer = new byte[headerBuffer.Length + messageBuffer.Length];
 
             Buffer.BlockCopy(headerBuffer, 0, packetBuffer, 0, headerBuffer.Length);
-            Buffer.BlockCopy(messageBuffer, 0,packetBuffer, headerBuffer.Length, length);
+            Buffer.BlockCopy(messageBuffer, 0,packetBuffer, headerBuffer.Length, messageBuffer.Length);
 
             int sendLength = clientSocket.Send(packetBuffer, packetBuffer.Length, SocketFlags.None);
 
