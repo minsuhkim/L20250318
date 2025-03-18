@@ -10,63 +10,40 @@ using System.Text;
 
 namespace Client
 {
-    public class Message
-    {
-        public Message(string inMessage)
-        {
-            message = inMessage;
-        }
-
-        public string message;
-    }
-
     class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Client");
+            string jsonString = "{\"message\" : \"안녕하세요\"}";
+            byte[] message = Encoding.UTF8.GetBytes(jsonString);
+            ushort length = (ushort)message.Length;
 
-            Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 4000);
+            byte[] lengthBuffer = new byte[2];
+            lengthBuffer = BitConverter.GetBytes(length);
 
-            serverSocket.Connect(clientEndPoint);
+            byte[] buffer = new byte[2 + length];
 
-            byte[] buffer = new byte[1024];
+            Buffer.BlockCopy(lengthBuffer, 0, buffer, 0, 2);
+            Buffer.BlockCopy(message, 0, buffer, 2, length);
 
-            Message message = new Message("이미지 요청");
-            string jsonData = JsonConvert.SerializeObject(message);
+            Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            buffer = Encoding.UTF8.GetBytes(jsonData);
-            int sendLength = serverSocket.Send(buffer);
+            IPEndPoint listenEndPoint = new IPEndPoint(IPAddress.Loopback, 4000);
 
+            clientSocket.Connect(listenEndPoint);
 
-            byte[] buffer2 = new byte[1024];
-            int receiveLength = serverSocket.Receive(buffer2);
-            string jsonResponse = Encoding.UTF8.GetString(buffer2, 0, receiveLength);
+            int SendLength = clientSocket.Send(buffer, buffer.Length, SocketFlags.None);
 
-            Message responseMessage = JsonConvert.DeserializeObject<Message>(jsonResponse);
-            Console.WriteLine($"서버 응답: {responseMessage}");
+            int RecvLength = clientSocket.Receive(lengthBuffer, 2, SocketFlags.None);
+            length = BitConverter.ToUInt16(lengthBuffer, 0);
 
-            if(responseMessage.message == "이미지 전송 시작")
-            {
-                string saveImagePath = "./received_image.webp";
-                using (FileStream fs = new FileStream(saveImagePath, FileMode.Create, FileAccess.Write))
-                {
-                    buffer = new byte[8192]; // 8KB 버퍼
-                    int bytesRead;
+            byte[] recvBuffer = new byte[4096];
+            RecvLength = clientSocket.Receive(recvBuffer, length, SocketFlags.None);
 
-                    while ((bytesRead = serverSocket.Receive(buffer)) > 0)
-                    {
-                        fs.Write(buffer, 0, bytesRead);
-                        if (bytesRead < buffer.Length) // 더 이상 받을 데이터가 없으면 종료
-                            break;
-                    }
-                }
+            string JsonString = Encoding.UTF8.GetString(recvBuffer);
+            Console.WriteLine(JsonString);
 
-                Console.WriteLine($"이미지 저장 완료: {saveImagePath}");
-            }
-
-            serverSocket.Close();
+            clientSocket.Close();
         }
     }
 }
