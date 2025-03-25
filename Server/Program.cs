@@ -227,6 +227,7 @@ namespace Server
 
             int SendLength = toSocket.Send(packetBuffer, packetBuffer.Length, SocketFlags.None);
         }
+
         static void RecvPacket(Socket fromSocket, out string jsonString)
         {
             byte[] lengthBuffer = new byte[2];
@@ -267,6 +268,8 @@ namespace Server
             //{
             //    // 리턴값 받는 로직
             //}
+
+
 
             listenSocket.Close();
         }
